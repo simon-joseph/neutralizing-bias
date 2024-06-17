@@ -6,7 +6,8 @@ import sys
 import spacy
 from tqdm import tqdm
 
-NLP = spacy.load('en_core_web_sm')
+# NLP = spacy.load('en_core_web_sm')
+NLP = spacy.load('pl_core_news_sm')
 
 
 def get_pos_dep(toks):
@@ -40,14 +41,14 @@ def get_pos_dep(toks):
 
 def main(in_file):
     for line in tqdm(open(in_file), total=sum(1 for _ in open(in_file))):
-    	parts = line.strip().split('\t')
-    	if len(parts) != 5:
-    		continue
-    		
-    	pre_pos, pre_dep = get_pos_dep(parts[1].split())
-    	
-    	if pre_pos is not None and pre_dep is not None:
-    		print('\t'.join(parts + [pre_pos, pre_dep]))
+        parts = line.strip().split('\t')
+        if len(parts) != 5:
+            continue
+            
+        pre_pos, pre_dep = get_pos_dep(parts[1].split())
+        
+        if pre_pos is not None and pre_dep is not None:
+            print('\t'.join(parts + [pre_pos, pre_dep]))
 
 if __name__ == '__main__':
     in_file = sys.argv[1]
