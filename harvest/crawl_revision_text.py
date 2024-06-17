@@ -27,6 +27,8 @@ import mwparserfromhell
 from bs4 import BeautifulSoup
 import urllib
 from urllib.request import urlopen
+from urllib.error import HTTPError
+import time
 
 
 
@@ -80,7 +82,8 @@ def html2diff(html):
     prev_changed, next_changed = [],[]
     prev_deleted, next_added = [],[]
 
-    soup = BeautifulSoup(html, 'html')
+    soup = BeautifulSoup(html, 'html.parser')
+    
     nodes = soup.find_all(class_=re.compile(r'(diff-deletedline)|(diff-addedline)|(diff-empty)'))
     div_p = re.compile(r'<div.*?>(.*)</div>', re.DOTALL)
     
@@ -92,21 +95,23 @@ def html2diff(html):
         node_prev = nodes[i]
         node_next = nodes[i + 1]
 
+        formatter = None
+
         # seperate  revisions into chunks that were modified,
         # chunks that were purely deleted and chunks that were purely added
         if not node_prev.div and not node_next.div:
             continue
         elif not node_prev.div:
-            next_match = re.match(div_p, node_next.div.prettify(formatter=None))
+            next_match = re.match(div_p, node_next.div.prettify(formatter=formatter))
             if next_match:
                 next_added.append(next_match.group(1).strip())
         elif not node_next.div:
-            prev_match = re.match(div_p, node_prev.div.prettify(formatter=None))
+            prev_match = re.match(div_p, node_prev.div.prettify(formatter=formatter))
             if prev_match:
                 prev_deleted.append(prev_match.group(1).strip())
         else:
-            prev_match = re.match(div_p, node_prev.div.prettify(formatter=None))
-            next_match = re.match(div_p, node_next.div.prettify(formatter=None))
+            prev_match = re.match(div_p, node_prev.div.prettify(formatter=formatter))
+            next_match = re.match(div_p, node_next.div.prettify(formatter=formatter))
             if prev_match and next_match:
                 prev_changed.append(prev_match.group(1).strip())
                 next_changed.append(next_match.group(1).strip())
@@ -116,16 +121,29 @@ def html2diff(html):
 
 def url2diff(url):
     try:
+        time.sleep(0.7) # sleep for 0.7 seconds to avoid overloading the server
         response = urlopen(url)
         html = response.read()
         return html2diff(html)
+    except HTTPError as e:
+        if e.code == 429:
+            if 'Retry-After' in e.headers:
+                print(e.headers, file=sys.stderr)   
+                sleep_time = int(e.headers['Retry-After'])
+                print(f"429 error sleeping for {sleep_time}s per Retry-After header", file=sys.stderr)
+                time.sleep(sleep_time)
+                return url2diff(url)  # Retry the request
+            else:
+                print('429 error but no Retry-After header, defaulting to 10 seconds', file=sys.stderr)
+                time.sleep(10)
+                return url2diff(url)  # Retry the request
     except Exception as e:
         print(e, file=sys.stderr)
         return [], [], [], []
 
 
 def wiki_text_clean(text):
-    text = ''.join([x for x in text if x in string.printable])
+    # text = ''.join([x for x in text if x in string.printable])
     text = text.replace('\n', ' ').replace('\t', ' ')
     return text
 
@@ -137,7 +155,7 @@ def gen_revisions(rev_ids):
     for rev_id in tqdm(rev_ids):
         print('processing revision id = ' + str(rev_id), file=sys.stderr)
 
-        url = 'https://en.wikipedia.org/wiki/?diff=' + str(rev_id)
+        url = 'https://pl.wikipedia.org/wiki/?diff=' + str(rev_id)
         prevs_, nexts_, prev_deleted, next_added = url2diff(url)
 
         if len(prevs_) != len(nexts_):
