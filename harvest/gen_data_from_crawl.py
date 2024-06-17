@@ -32,11 +32,15 @@ import string
 from nltk import sent_tokenize, word_tokenize
 
 from pytorch_pretrained_bert.tokenization import BertTokenizer
+from transformers import BertTokenizer, AutoTokenizer
 from simplediff import diff
 # from spellchecker import SpellChecker
-from autocorrect import spell
+from autocorrect import Speller
 
+import nltk
+nltk.download('punkt')
 
+spell = Speller(lang='pl')
 
 crawl_path = sys.argv[1]
 cache_path = sys.argv[2]
@@ -61,8 +65,11 @@ CTR_NON_EDIT_CHUNKS = 0
 CTR_FAILED_TAGGING = 0
 
 
-BERT_MODEL = "bert-base-uncased"
-TOKENIZER = BertTokenizer.from_pretrained(BERT_MODEL, cache_dir=cache_path)
+BERT_MODEL = "google-bert/bert-base-multilingual-uncased"
+BERT_MODEL = "dkleczek/bert-base-polish-uncased-v1"
+TOKENIZER = AutoTokenizer.from_pretrained(BERT_MODEL, cache_dir=cache_path)
+# BERT_MODEL = "bert-base-uncased"
+# TOKENIZER = BertTokenizer.from_pretrained(BERT_MODEL, cache_dir=cache_path)
 
 # ENCHANT_DICT = enchant.Dict("en_US")
 
@@ -82,7 +89,8 @@ def clean_wikitext(token_list):
     x = ' '.join(token_list)
 
     # ascii only
-    x = ''.join(filter(lambda x: x in string.printable, x))
+    allowed = string.printable+'ęĘóÓąĄśŚłŁżŻźŹćĆńŃ'
+    x = ''.join(filter(lambda x: x in allowed, x))
 
     # preemptively remove <ref>'s (including uncompleted)
     x = x.strip()
@@ -330,7 +338,7 @@ def sent_generator(revisions):
         if len(prevs) > 1 or len(posts) > 1:
             CTR_MULTIPLE_EDITS += 1
             continue
-            
+
         prev_text = clean_wikitext(prevs).lower()
         post_text = clean_wikitext(posts).lower()
 
@@ -348,6 +356,8 @@ def sent_generator(revisions):
 
         prev_sents_tok = [tokenize(s) for s in prev_sents_raw]
         post_sents_tok = [tokenize(s) for s in post_sents_raw]
+
+        # print ("\n".join(prev_sents_tok))
 
         rev_examples = []
         for i, j, score in find_matches(prev_sents_tok, post_sents_tok):
@@ -387,7 +397,7 @@ revisions = {
     ] for l in open(crawl_path) if len(l.split('\t')) == 5
 }
 
-print(open(crawl_path).readlines())
+# print(open(crawl_path).readlines())
 
 print('EXTRACTING EXAMPLES...')
 
