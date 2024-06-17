@@ -1,9 +1,9 @@
 
 1. Download the latest dump of historical Wikipedia revision data.
 ```
-wget https://dumps.wikimedia.org/enwiki/20190120/enwiki-20190120-stub-meta-history.xml.gz
-gunzip enwiki-20190120-stub-meta-history.xml.gz
-export $WIKI_DATA=enwiki-20190120-stub-meta-history.xml
+wget https://dumps.wikimedia.org/plwiki/20240501/plwiki-20240501-stub-meta-history.xml.gz
+gunzip plwiki-20240501-stub-meta-history.xml.gz
+export WIKI_DATA=plwiki-20240501-stub-meta-history.xml
 ```
 
 2. Get all NPOV-related revision ids.
