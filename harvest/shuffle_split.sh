@@ -5,6 +5,7 @@ IN_CORPUS=$1
 
 
 echo 'SHUFFLING...'
+# is gshuf missing on osx instal coreutils with brew : brew install coreutils
 cat $IN_CORPUS | gshuf > $IN_CORPUS.shuf
 
 echo 'SPLITTING...'
